@@ -6,6 +6,8 @@
 #include <ESPUI.h>
 #include <AccelStepper.h>
 #include <MultiStepper.h>
+#include <IRremoteESP8266.h>
+#include <IRsend.h>
 
 const byte DNS_PORT = 53;
 IPAddress apIP(192, 168, 1, 1);
@@ -23,6 +25,9 @@ const uint8_t ANGLE_ENABLE_PIN     = GPIO_NUM_13; // This is the same for both?
 const float   STEPS_PER_DEG        = 34.87;
 const float   MAX_SPEED_DEG_S      = 50.0;
 const float   ACCELERATION_DEG_S_S = 50.0;
+
+const uint8_t IR_LED_PIN           = GPIO_NUM_17; // I think this is the SPINDLE_PWM_PIN
+IRsend irsend(IR_LED_PIN);
 
 AccelStepper distanceMotor(AccelStepper::DRIVER, DISTANCE_STEP_PIN, DISTANCE_DIR_PIN);
 AccelStepper angleMotor(AccelStepper::DRIVER, ANGLE_STEP_PIN, ANGLE_DIR_PIN);
@@ -44,6 +49,7 @@ const long UPDATE_PERIOD_MILLIS = 1000;
 
 // Global data.
 float gTotalTime(60);
+float gPhotoPeriod(6);
 float gPreviewFraction(0.0);
 
 float gDesiredAngle(0);
@@ -63,6 +69,7 @@ bool gFine(false);
 
 long prevTime = 0;
 long cycleTime = 0;
+long photoTime = 0;
 
 void setPreviewFraction(float newFraction) {
   gPreviewFraction = newFraction;
@@ -73,6 +80,12 @@ void setPreviewFraction(float newFraction) {
 
 void changeSeconds(Control sender, int type) {
   gTotalTime = sender.value.toFloat();
+  Serial.print(sender.value);
+  Serial.println(" Accepted");
+}
+
+void photoSeconds(Control sender, int type) {
+  gPhotoPeriod = sender.value.toFloat();
   Serial.print(sender.value);
   Serial.println(" Accepted");
 }
@@ -115,6 +128,13 @@ void saveEnd(Control sender, int type) {
     gEndAngle    = gDesiredAngle;
     gEndDistance = gDesiredDistance;
     setPreviewFraction(1.0);
+  }
+}
+
+void takePhoto(Control sender, int type) {
+  if (type == B_UP) {
+    Serial.println("Take Photo");
+    irsend.sendSony(0xB4B8F, 20); // from https://diydrones.com/forum/topics/sony-a7-infrared-codes
   }
 }
 
@@ -172,6 +192,7 @@ void playPause(Control sender, int value) {
     case S_ACTIVE:
       Serial.print("Play");
       gPlay = true;
+      photoTime = millis();
       break;
     case S_INACTIVE:
       Serial.print("Pause");
@@ -222,7 +243,9 @@ void setupUI() {
   ESPUI.button("Load Start Location", &loadStart, COLOR_ALIZARIN);
   ESPUI.button("Save End Location", &saveEnd, COLOR_EMERALD);
   ESPUI.button("Load End Location", &loadEnd, COLOR_ALIZARIN);
+  ESPUI.button("Test Camera", &takePhoto, COLOR_WETASPHALT);
   ESPUI.number("Total Seconds", &changeSeconds, COLOR_CARROT, gTotalTime, 1, 60 * 60);
+  ESPUI.number("Photo Period Seconds", &photoSeconds, COLOR_CARROT, gPhotoPeriod, 1, 60 * 60);
   ESPUI.switcher("Play", gPlay, &playPause, COLOR_SUNFLOWER);
   ESPUI.slider("Progress", &slider, COLOR_TURQUOISE, String(gPreviewFraction * 100.0));
   ESPUI.button("RESET", &reset, COLOR_ALIZARIN);
@@ -256,6 +279,8 @@ void setup(void) {
 
   setupMotors();
 
+  irsend.begin();
+
   cycleTime = millis();
 }
 
@@ -282,6 +307,15 @@ void loop(void) {
     positions[0] = static_cast<long>(STEPS_PER_MM * gDesiredDistance);
     positions[1] = static_cast<long>(STEPS_PER_DEG * gDesiredAngle);
     multiStepper.moveTo(positions);
+
+    if (cycleTime - photoTime > static_cast<long>(gPhotoPeriod * 1000))
+    {
+      // take a photo
+      Serial.println("Take Photo");
+      irsend.sendSony(0xB4B8F, 20); // from https://diydrones.com/forum/topics/sony-a7-infrared-codes
+      photoTime += static_cast<long>(gPhotoPeriod * 1000);
+    }
+
   } else {
     float scale(1.0);
     if (gFine) {
