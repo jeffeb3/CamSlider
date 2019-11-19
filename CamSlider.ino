@@ -20,7 +20,7 @@ const float   ACCELERATION_MM_S_S  = 50.0;
 const uint8_t ANGLE_STEP_PIN       = GPIO_NUM_14;
 const uint8_t ANGLE_DIR_PIN        = GPIO_NUM_25;
 const uint8_t ANGLE_ENABLE_PIN     = GPIO_NUM_13; // This is the same for both?
-const float   STEPS_PER_DEG        = 100.0;
+const float   STEPS_PER_DEG        = 34.87;
 const float   MAX_SPEED_DEG_S      = 50.0;
 const float   ACCELERATION_DEG_S_S = 50.0;
 
@@ -38,8 +38,8 @@ const char *ssid = "ESPUI";
 const char *password = "12345678";
 
 // These should be in units/second
-const float MANUAL_ANGLE_RATE = 0.95 * MAX_SPEED_DEG_S;
-const float MANUAL_DISTANCE_RATE = 0.95 * MAX_SPEED_MM_S;
+const float MANUAL_ANGLE_RATE = 0.90 * MAX_SPEED_DEG_S;
+const float MANUAL_DISTANCE_RATE = 0.90 * MAX_SPEED_MM_S;
 const long UPDATE_PERIOD_MILLIS = 1000;
 
 // Global data.
@@ -131,35 +131,35 @@ void manualControl(Control sender, int value) {
   gPlay = false;
   switch (value) {
     case P_LEFT_DOWN:
-      gManualAngleRate = -1.0;
+      gManualDistanceRate = -1.0;
       Serial.print("Manual Left 1");
       break;
     case P_LEFT_UP:
-      gManualAngleRate = 0.0;
+      gManualDistanceRate = 0.0;
       Serial.print("Manual Left 0");
       break;
     case P_RIGHT_DOWN:
-      gManualAngleRate = +1.0;
+      gManualDistanceRate = +1.0;
       Serial.print("Manual Right 1");
       break;
     case P_RIGHT_UP:
-      gManualAngleRate = 0.0;
+      gManualDistanceRate = 0.0;
       Serial.print("Manual Right 0");
       break;
     case P_FOR_DOWN:
-      gManualDistanceRate = +1.0;
+      gManualAngleRate = +1.0;
       Serial.print("Manual Up 1");
       break;
     case P_FOR_UP:
-      gManualDistanceRate = 0.0;
+      gManualAngleRate = 0.0;
       Serial.print("Manual Up 0");
       break;
     case P_BACK_DOWN:
-      gManualDistanceRate = -1.0;
+      gManualAngleRate = -1.0;
       Serial.print("Manual Down 1");
       break;
     case P_BACK_UP:
-      gManualDistanceRate = 0.0;
+      gManualAngleRate = 0.0;
       Serial.print("Manual Down 0");
       break;
   }
@@ -200,7 +200,7 @@ void fineMotor(Control sender, int value) {
 void setupWifi() {
   // change the beginning to this if you want to join an existing network
   Serial.begin(115200);
-  WiFi.begin("ssid", "secret");
+  WiFi.begin(ssid, password);
   Serial.println("");
   // Wait for connection
   while (WiFi.status() != WL_CONNECTED) {
