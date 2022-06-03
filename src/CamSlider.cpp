@@ -1,6 +1,25 @@
 
-// Copyright Jeff Eberl 2019. License coming, but currently TBD.
-// See LICENSE.md
+// MIT License
+//
+// Copyright (c) 2022 Jeff Eberl
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 
 #include <DNSServer.h>
 #include <ESPUI.h>
@@ -71,6 +90,13 @@ long prevTime = 0;
 long cycleTime = 0;
 long photoTime = 0;
 
+// Save these IDs from elements we want to change
+uint16_t gDistanceId = 0;
+uint16_t gAngleId = 0;
+uint16_t gProgressId = 0;
+uint16_t gPlayId = 0;
+uint16_t gUptimeId = 0;
+
 void setPreviewFraction(float newFraction) {
   gPreviewFraction = newFraction;
   // set the desired position
@@ -78,25 +104,25 @@ void setPreviewFraction(float newFraction) {
   gDesiredDistance = (gPreviewFraction * (gEndDistance - gStartDistance)) + gStartDistance;
 }
 
-void changeSeconds(Control sender, int type) {
-  gTotalTime = sender.value.toFloat();
-  Serial.print(sender.value);
+void changeSeconds(Control* sender, int type) {
+  gTotalTime = sender->value.toFloat();
+  Serial.print(sender->value);
   Serial.println(" Accepted");
 }
 
-void photoSeconds(Control sender, int type) {
-  gPhotoPeriod = sender.value.toFloat();
-  Serial.print(sender.value);
+void photoSeconds(Control* sender, int type) {
+  gPhotoPeriod = sender->value.toFloat();
+  Serial.print(sender->value);
   Serial.println(" Accepted");
 }
 
-void slider(Control sender, int type) {
+void slider(Control* sender, int type) {
   Serial.print("preview slider set to: ");
-  Serial.println(sender.value);
-  setPreviewFraction(0.01 * sender.value.toFloat());
+  Serial.println(sender->value);
+  setPreviewFraction(0.01 * sender->value.toFloat());
 }
 
-void reset(Control sender, int type) {
+void reset(Control* sender, int type) {
   if (type == B_UP) {
     Serial.println("Reset");
     delay(100);
@@ -104,7 +130,7 @@ void reset(Control sender, int type) {
   }
 }
 
-void saveStart(Control sender, int type) {
+void saveStart(Control* sender, int type) {
   if (type == B_UP) {
     Serial.println("Save Start");
     gStartAngle    = gDesiredAngle;
@@ -113,7 +139,7 @@ void saveStart(Control sender, int type) {
   }
 }
 
-void loadStart(Control sender, int type) {
+void loadStart(Control* sender, int type) {
   if (type == B_UP) {
     Serial.println("Load Start");
     gDesiredAngle    = gStartAngle;
@@ -122,7 +148,7 @@ void loadStart(Control sender, int type) {
   }
 }
 
-void saveEnd(Control sender, int type) {
+void saveEnd(Control* sender, int type) {
   if (type == B_UP) {
     Serial.println("Save End");
     gEndAngle    = gDesiredAngle;
@@ -131,14 +157,14 @@ void saveEnd(Control sender, int type) {
   }
 }
 
-void takePhoto(Control sender, int type) {
+void takePhoto(Control* sender, int type) {
   if (type == B_UP) {
     Serial.println("Take Photo");
     irsend.sendSony(0xB4B8F, 20); // from https://diydrones.com/forum/topics/sony-a7-infrared-codes
   }
 }
 
-void loadEnd(Control sender, int type) {
+void loadEnd(Control* sender, int type) {
   if (type == B_UP) {
     Serial.println("Load End");
     gDesiredAngle    = gEndAngle;
@@ -147,7 +173,7 @@ void loadEnd(Control sender, int type) {
   }
 }
 
-void manualControl(Control sender, int value) {
+void manualControl(Control* sender, int value) {
   gPlay = false;
   switch (value) {
     case P_LEFT_DOWN:
@@ -184,10 +210,10 @@ void manualControl(Control sender, int value) {
       break;
   }
   Serial.print(" ");
-  Serial.println(sender.id);
+  Serial.println(sender->id);
 }
 
-void playPause(Control sender, int value) {
+void playPause(Control* sender, int value) {
   switch (value) {
     case S_ACTIVE:
       Serial.print("Play");
@@ -200,10 +226,10 @@ void playPause(Control sender, int value) {
       break;
   }
   Serial.print(" ");
-  Serial.println(sender.id);
+  Serial.println(sender->id);
 }
 
-void fineMotor(Control sender, int value) {
+void fineMotor(Control* sender, int value) {
   switch (value) {
     case S_ACTIVE:
       Serial.print("Fine");
@@ -215,7 +241,7 @@ void fineMotor(Control sender, int value) {
       break;
   }
   Serial.print(" ");
-  Serial.println(sender.id);
+  Serial.println(sender->id);
 }
 
 void setupWifi() {
@@ -234,11 +260,11 @@ void setupWifi() {
 }
 
 void setupUI() {
-  ESPUI.pad("Manual Control", false, &manualControl, COLOR_CARROT);
-  ESPUI.switcher("Fine", gFine, &fineMotor, COLOR_SUNFLOWER);
-  ESPUI.label("Angle:", COLOR_WETASPHALT, String(angleMotor.currentPosition() / STEPS_PER_DEG));
-  ESPUI.label("Distance:", COLOR_WETASPHALT, String(distanceMotor.currentPosition() / STEPS_PER_MM));
-  ESPUI.label("uptime:", COLOR_WETASPHALT, "0 sec");
+  ESPUI.pad("Manual Control", &manualControl, COLOR_CARROT);
+  ESPUI.switcher("Fine", &fineMotor, COLOR_SUNFLOWER, gFine);
+  gAngleId = ESPUI.label("Angle:", COLOR_WETASPHALT, String(angleMotor.currentPosition() / STEPS_PER_DEG));
+  gDistanceId = ESPUI.label("Distance:", COLOR_WETASPHALT, String(distanceMotor.currentPosition() / STEPS_PER_MM));
+  gUptimeId = ESPUI.label("uptime:", COLOR_WETASPHALT, "0 sec");
   ESPUI.button("Save Start Location", &saveStart, COLOR_EMERALD);
   ESPUI.button("Load Start Location", &loadStart, COLOR_ALIZARIN);
   ESPUI.button("Save End Location", &saveEnd, COLOR_EMERALD);
@@ -246,8 +272,8 @@ void setupUI() {
   ESPUI.button("Test Camera", &takePhoto, COLOR_WETASPHALT);
   ESPUI.number("Total Seconds", &changeSeconds, COLOR_CARROT, gTotalTime, 1, 60 * 60);
   ESPUI.number("Photo Period Seconds", &photoSeconds, COLOR_CARROT, gPhotoPeriod, 1, 60 * 60);
-  ESPUI.switcher("Play", gPlay, &playPause, COLOR_SUNFLOWER);
-  ESPUI.slider("Progress", &slider, COLOR_TURQUOISE, String(gPreviewFraction * 100.0));
+  gPlayId = ESPUI.switcher("Play", &playPause, COLOR_SUNFLOWER, gPlay);
+  gProgressId = ESPUI.slider("Progress", &slider, COLOR_TURQUOISE, static_cast<int>(gPreviewFraction * 100.0));
   ESPUI.button("RESET", &reset, COLOR_ALIZARIN);
 
   dnsServer.start(DNS_PORT, "*", apIP);
@@ -341,11 +367,11 @@ void loop(void) {
     Serial.print(" speed: ");
     Serial.print(distanceMotor.speed());
     Serial.println();
-    ESPUI.print("Distance:", String(distanceMotor.currentPosition() / STEPS_PER_MM) + " mm");
-    ESPUI.print("Angle:", String(angleMotor.currentPosition() / STEPS_PER_DEG) + " deg");
-    ESPUI.updateSlider("Progress", gPreviewFraction * 100.0);
-    ESPUI.updateSwitcher("Play", gPlay);
+    ESPUI.print(gDistanceId, String(distanceMotor.currentPosition() / STEPS_PER_MM) + " mm");
+    ESPUI.print(gAngleId, String(angleMotor.currentPosition() / STEPS_PER_DEG) + " deg");
+    ESPUI.updateSlider(gProgressId, gPreviewFraction * 100.0);
+    ESPUI.updateSwitcher(gPlayId, gPlay);
 
-    ESPUI.print("uptime:", String(static_cast<float>(millis())/1000.0) + " sec"); prevTime = millis();
+    ESPUI.print(gUptimeId, String(static_cast<float>(millis())/1000.0) + " sec"); prevTime = millis();
   }
 }
