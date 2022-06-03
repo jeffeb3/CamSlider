@@ -265,16 +265,16 @@ void setupUI() {
   gAngleId = ESPUI.label("Angle:", COLOR_WETASPHALT, String(angleMotor.currentPosition() / STEPS_PER_DEG));
   gDistanceId = ESPUI.label("Distance:", COLOR_WETASPHALT, String(distanceMotor.currentPosition() / STEPS_PER_MM));
   gUptimeId = ESPUI.label("uptime:", COLOR_WETASPHALT, "0 sec");
-  ESPUI.button("Save Start Location", &saveStart, COLOR_EMERALD);
-  ESPUI.button("Load Start Location", &loadStart, COLOR_ALIZARIN);
-  ESPUI.button("Save End Location", &saveEnd, COLOR_EMERALD);
-  ESPUI.button("Load End Location", &loadEnd, COLOR_ALIZARIN);
-  ESPUI.button("Test Camera", &takePhoto, COLOR_WETASPHALT);
+  ESPUI.button("Save Start Location", &saveStart, COLOR_EMERALD, "Save start");
+  ESPUI.button("Load Start Location", &loadStart, COLOR_ALIZARIN, "Load Start");
+  ESPUI.button("Save End Location", &saveEnd, COLOR_EMERALD, "Save end");
+  ESPUI.button("Load End Location", &loadEnd, COLOR_ALIZARIN, "Load end");
+  ESPUI.button("Test Camera", &takePhoto, COLOR_WETASPHALT, "Test camera");
   ESPUI.number("Total Seconds", &changeSeconds, COLOR_CARROT, gTotalTime, 1, 60 * 60);
   ESPUI.number("Photo Period Seconds", &photoSeconds, COLOR_CARROT, gPhotoPeriod, 1, 60 * 60);
   gPlayId = ESPUI.switcher("Play", &playPause, COLOR_SUNFLOWER, gPlay);
   gProgressId = ESPUI.slider("Progress", &slider, COLOR_TURQUOISE, static_cast<int>(gPreviewFraction * 100.0));
-  ESPUI.button("RESET", &reset, COLOR_ALIZARIN);
+  ESPUI.button("RESET", &reset, COLOR_ALIZARIN, "Reset");
 
   dnsServer.start(DNS_PORT, "*", apIP);
   ESPUI.begin("ESPUI Control");
